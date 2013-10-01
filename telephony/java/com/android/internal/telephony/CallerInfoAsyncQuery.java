@@ -259,14 +259,14 @@ public class CallerInfoAsyncQuery {
                         // updateGeoDescription() unconditionally here, or possibly add a
                         // new parameter to CallerInfoAsyncQuery.startQuery() to force
                         // the geoDescription field to be populated.)
-
-                        if (TextUtils.isEmpty(mCallerInfo.name)) {
+                        // Engle, 添加电话归属地 
+                        //if (TextUtils.isEmpty(mCallerInfo.name)) {
                             // Actually when no contacts match the incoming phone number,
                             // the CallerInfo object is totally blank here (i.e. no name
                             // *or* phoneNumber).  So we need to pass in cw.number as
                             // a fallback number.
                             mCallerInfo.updateGeoDescription(mQueryContext, cw.number);
-                        }
+                        //}
                     }
 
                     // Use the number entered by the user for display.

@@ -563,6 +563,8 @@ class ContextImpl extends Context {
                     return WimaxHelper.createWimaxService(ctx, ctx.mMainThread.getHandler());
                 }});
 
+        // Engle, 去掉FM Service
+        /**
         registerService("fm_receiver", new ServiceFetcher() {
                 public Object createService(ContextImpl ctx) {
                     IBinder b = ServiceManager.getService("fm_receiver");
@@ -576,6 +578,7 @@ class ContextImpl extends Context {
                     IFmTransmitter service = IFmTransmitter.Stub.asInterface(b);
                     return new FmTransmitterImpl(service);
                 }});
+        */
 
         registerService(IRDA_SERVICE, new StaticServiceFetcher() {
                 public Object createStaticService() {

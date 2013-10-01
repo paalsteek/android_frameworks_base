@@ -31,7 +31,8 @@
 
 namespace android {
 
-static const char* QTAGUID_IFACE_STATS = "/proc/net/xt_qtaguid/iface_stat_fmt";
+static const char* QTAGUID_IFACE_STATS_FMT = "/proc/net/xt_qtaguid/iface_stat_fmt";
+static const char* QTAGUID_IFACE_STATS_ALL = "/proc/net/xt_qtaguid/iface_stat_all";
 static const char* QTAGUID_UID_STATS = "/proc/net/xt_qtaguid/stats";
 
 // NOTE: keep these in sync with TrafficStats.java
@@ -74,8 +75,8 @@ static uint64_t getStatsType(struct Stats* stats, StatsType type) {
     }
 }
 
-static int parseIfaceStats(const char* iface, struct Stats* stats) {
-    FILE *fp = fopen(QTAGUID_IFACE_STATS, "r");
+static int parseIfaceStatsFmt(const char* iface, struct Stats* stats) {
+    FILE *fp = fopen(QTAGUID_IFACE_STATS_FMT, "r");
     if (fp == NULL) {
         return -1;
     }
@@ -91,7 +92,8 @@ static int parseIfaceStats(const char* iface, struct Stats* stats) {
                 "%*u %llu %*u %*u %*u %*u", cur_iface, &rxBytes,
                 &rxPackets, &txBytes, &txPackets, &tcpRxPackets, &tcpTxPackets);
         if (matched >= 5) {
-            if (matched == 7) {
+            // Engle, change to >=
+            if (matched >= 7) {
                 foundTcp = true;
             }
             if (!iface || !strcmp(iface, cur_iface)) {
@@ -99,7 +101,8 @@ static int parseIfaceStats(const char* iface, struct Stats* stats) {
                 stats->rxPackets += rxPackets;
                 stats->txBytes += txBytes;
                 stats->txPackets += txPackets;
-                if (matched == 7) {
+                // Engle, change to >=
+                if (matched >= 7) {
                     stats->tcpRxPackets += tcpRxPackets;
                     stats->tcpTxPackets += tcpTxPackets;
                 }
@@ -116,6 +119,64 @@ static int parseIfaceStats(const char* iface, struct Stats* stats) {
         return -1;
     }
     return 0;
+}
+
+static int parseIfaceStatsAll(const char* iface, struct Stats* stats) {
+    FILE *fp = fopen(QTAGUID_IFACE_STATS_ALL, "r");
+    if (fp == NULL) {
+        return -1;
+    }
+
+    char buffer[384];
+    char cur_iface[32];
+    uint64_t active, rxBytes, rxPackets, txBytes, txPackets, aRxBytes, aRxPackets, aTxBytes, aTxPackets;
+
+    while (fgets(buffer, sizeof(buffer), fp) != NULL) {
+        int matched = sscanf(buffer, "%31s %llu %llu %llu %llu "
+                "%llu %llu %llu %llu %llu", cur_iface, &active, &rxBytes,
+                &rxPackets, &txBytes, &txPackets, &aRxBytes, &aRxPackets, &aTxBytes, &aTxPackets);
+        if (matched >= 10) {
+            if (active != 0) {
+                rxBytes += aRxBytes;
+                rxPackets += aRxPackets;
+                txBytes += aTxBytes;
+                txPackets += aTxPackets;
+            }
+            if (!iface || !strcmp(iface, cur_iface)) {
+                stats->rxBytes += rxBytes;
+                stats->rxPackets += rxPackets;
+                stats->txBytes += txBytes;
+                stats->txPackets += txPackets;
+            }
+        }
+    }
+
+    stats->tcpRxPackets = UNKNOWN;
+    stats->tcpTxPackets = UNKNOWN;
+
+    if (fclose(fp) != 0) {
+        return -1;
+    }
+    return 0;
+}
+
+static int parseIfaceStats(const char* iface, struct Stats* stats) {
+    FILE *fp = fopen(QTAGUID_IFACE_STATS_FMT, "r");
+    if (fp != NULL) {
+	if (fclose(fp) != 0) {
+            return -1;
+	}
+        return parseIfaceStatsFmt(iface, stats);
+    } else {
+        FILE *fp = fopen(QTAGUID_IFACE_STATS_ALL, "r");
+        if (fp != NULL) {
+	    if (fclose(fp) != 0) {
+                return -1;
+	    }
+            return parseIfaceStatsAll(iface, stats);
+        }
+    }
+    return -1;
 }
 
 static int parseUidStats(const uint32_t uid, struct Stats* stats) {

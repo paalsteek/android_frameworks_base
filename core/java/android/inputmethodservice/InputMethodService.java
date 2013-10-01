@@ -21,6 +21,8 @@ import static android.view.ViewGroup.LayoutParams.WRAP_CONTENT;
 
 import android.app.ActivityManager;
 import android.app.Dialog;
+// Engle, 添加输入法切换支持
+import android.content.ContentResolver;
 import android.content.Context;
 import android.content.res.Configuration;
 import android.content.res.Resources;
@@ -57,6 +59,8 @@ import android.view.inputmethod.ExtractedTextRequest;
 import android.view.inputmethod.InputBinding;
 import android.view.inputmethod.InputConnection;
 import android.view.inputmethod.InputMethod;
+// Engle, 添加输入法切换支持
+import android.view.inputmethod.InputMethodInfo;
 import android.view.inputmethod.InputMethodManager;
 import android.view.inputmethod.InputMethodSubtype;
 import android.widget.Button;
@@ -65,6 +69,8 @@ import android.widget.LinearLayout;
 
 import java.io.FileDescriptor;
 import java.io.PrintWriter;
+// Engle, 添加输入法切换支持
+import java.util.List;
 
 /**
  * InputMethodService provides a standard implementation of an InputMethod,
@@ -1801,6 +1807,13 @@ public class InputMethodService extends AbstractInputMethodService {
             }
             return false;
         }
+        // Engle, 添加输入法切换支持
+        if (event.getKeyCode() == KeyEvent.KEYCODE_MEDIA_RECORD
+                || (event.getKeyCode() == KeyEvent.KEYCODE_SPACE && event.isCtrlPressed())) {
+            switchNextInputMethod();
+            return true;
+        }
+        
         return doMovementKey(keyCode, event, MOVEMENT_DOWN);
     }
 
@@ -1855,6 +1868,12 @@ public class InputMethodService extends AbstractInputMethodService {
             }
             return false;
         }
+        // Engle, 添加输入法切换支持
+        if (event.getKeyCode() == KeyEvent.KEYCODE_MEDIA_RECORD
+                || (event.getKeyCode() == KeyEvent.KEYCODE_SPACE && event.isCtrlPressed())) {
+            return true;
+        }
+        
         return doMovementKey(keyCode, event, MOVEMENT_UP);
     }
 
@@ -2412,5 +2431,36 @@ public class InputMethodService extends AbstractInputMethodService {
                 + " visibleTopInsets=" + mTmpInsets.visibleTopInsets
                 + " touchableInsets=" + mTmpInsets.touchableInsets
                 + " touchableRegion=" + mTmpInsets.touchableRegion);
+    }
+    
+ // Engle, 添加输入法切换支持
+    private void switchNextInputMethod() {
+        if (mImm != null) {
+            List<InputMethodInfo> imList = mImm.getEnabledInputMethodList();
+            ContentResolver resolver = this.getApplicationContext().getContentResolver();
+            String currentIme = Settings.Secure.getString(resolver,
+                    Settings.Secure.DEFAULT_INPUT_METHOD);
+            Log.d(TAG, "Current input method id: " + currentIme);
+            if (imList != null && imList.size() > 0) {
+                String firstIme = imList.get(0).getId();
+                String nextIme = currentIme;
+                int total = imList.size();
+                for (int i = 0; i < total; i++) {
+                    Log.d(TAG, "Fetch input method id: " + imList.get(i).getId());
+                    if (imList.get(i).getId().equals(currentIme)) {
+                        if (i < total - 1) {
+                            nextIme = imList.get(i + 1).getId();
+                        } else {
+                            nextIme = firstIme;
+                        }
+                        break;
+                    }
+                }
+                Log.d(TAG, "switch input method id to: " + nextIme);
+                switchInputMethod(nextIme);
+            }
+        } else {
+            Log.e(TAG, "Why cannot get the InputMethodManager?");
+        }
     }
 }

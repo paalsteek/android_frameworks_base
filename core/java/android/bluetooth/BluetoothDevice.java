@@ -1,6 +1,4 @@
 /*
- * Copyright (C) 2013 The Linux Foundation. All rights reserved
- * Not a Contribution.
  * Copyright (C) 2009 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -68,7 +66,6 @@ import java.util.UUID;
  */
 public final class BluetoothDevice implements Parcelable {
     private static final String TAG = "BluetoothDevice";
-    private static final boolean DBG = false;
 
     /**
      * Sentinel error value for this class. Guaranteed to not equal any other
@@ -298,11 +295,6 @@ public final class BluetoothDevice implements Parcelable {
     public static final String ACTION_UUID =
             "android.bluetooth.device.action.UUID";
 
-    /** @hide */
-    @SdkConstant(SdkConstantType.BROADCAST_INTENT_ACTION)
-    public static final String ACTION_MAS_INSTANCE =
-            "org.codeaurora.bluetooth.device.action.MAS_INSTANCE";
-
     /**
      * Broadcast Action: Indicates a failure to retrieve the name of a remote
      * device.
@@ -505,10 +497,6 @@ public final class BluetoothDevice implements Parcelable {
      */
     public static final String EXTRA_UUID = "android.bluetooth.device.extra.UUID";
 
-    /** @hide */
-    public static final String EXTRA_MAS_INSTANCE =
-        "org.codeaurora.bluetooth.device.extra.MAS_INSTANCE";
-
     /**
      * Lazy initialization. Guaranteed final after first object constructed, or
      * getService() called.
@@ -521,29 +509,16 @@ public final class BluetoothDevice implements Parcelable {
     /*package*/ static IBluetooth getService() {
         synchronized (BluetoothDevice.class) {
             if (sService == null) {
-                BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
-                sService = adapter.getBluetoothService(mStateChangeCallback);
+                IBinder b = ServiceManager.getService(BluetoothAdapter.BLUETOOTH_SERVICE);
+                if (b == null) {
+                    throw new RuntimeException("Bluetooth service not available");
+                }
+                sService = IBluetooth.Stub.asInterface(b);
             }
         }
         return sService;
     }
 
-    static IBluetoothManagerCallback mStateChangeCallback = new IBluetoothManagerCallback.Stub() {
-
-        public void onBluetoothServiceUp(IBluetooth bluetoothService)
-                throws RemoteException {
-            synchronized (BluetoothDevice.class) {
-                sService = bluetoothService;
-            }
-        }
-
-        public void onBluetoothServiceDown()
-            throws RemoteException {
-            synchronized (BluetoothDevice.class) {
-                sService = null;
-            }
-        }
-    };
     /**
      * Create a new BluetoothDevice
      * Bluetooth MAC address must be upper case, such as "00:11:22:33:AA:BB",
@@ -612,7 +587,6 @@ public final class BluetoothDevice implements Parcelable {
      * @return Bluetooth hardware address as string
      */
     public String getAddress() {
-        if (DBG) Log.d(TAG, "mAddress: " + mAddress);
         return mAddress;
     }
 
@@ -627,12 +601,8 @@ public final class BluetoothDevice implements Parcelable {
      * @return the Bluetooth name, or null if there was a problem.
      */
     public String getName() {
-        if (sService == null) {
-            Log.e(TAG, "BT not enabled. Cannot get Remote Device name");
-            return null;
-        }
         try {
-            return sService.getRemoteName(this);
+            return sService.getRemoteName(mAddress);
         } catch (RemoteException e) {Log.e(TAG, "", e);}
         return null;
     }
@@ -652,7 +622,7 @@ public final class BluetoothDevice implements Parcelable {
             return DEVICE_TYPE_UNKNOWN;
         }
         try {
-            return sService.getRemoteType(this);
+            return sService.getRemoteType(mAddress);
         } catch (RemoteException e) {Log.e(TAG, "", e);}
         return DEVICE_TYPE_UNKNOWN;
     }
@@ -665,12 +635,8 @@ public final class BluetoothDevice implements Parcelable {
      * @hide
      */
     public String getAlias() {
-        if (sService == null) {
-            Log.e(TAG, "BT not enabled. Cannot get Remote Device Alias");
-            return null;
-        }
         try {
-            return sService.getRemoteAlias(this);
+            return sService.getRemoteAlias(mAddress);
         } catch (RemoteException e) {Log.e(TAG, "", e);}
         return null;
     }
@@ -686,12 +652,8 @@ public final class BluetoothDevice implements Parcelable {
      * @hide
      */
     public boolean setAlias(String alias) {
-        if (sService == null) {
-            Log.e(TAG, "BT not enabled. Cannot set Remote Device name");
-            return false;
-        }
         try {
-            return sService.setRemoteAlias(this, alias);
+            return sService.setRemoteAlias(mAddress, alias);
         } catch (RemoteException e) {Log.e(TAG, "", e);}
         return false;
     }
@@ -726,12 +688,8 @@ public final class BluetoothDevice implements Parcelable {
      * @hide
      */
     public boolean createBond() {
-        if (sService == null) {
-            Log.e(TAG, "BT not enabled. Cannot create bond to Remote Device");
-            return false;
-        }
         try {
-            return sService.createBond(this);
+            return sService.createBond(mAddress);
         } catch (RemoteException e) {Log.e(TAG, "", e);}
         return false;
     }
@@ -756,11 +714,9 @@ public final class BluetoothDevice implements Parcelable {
      * @hide
      */
     public boolean createBondOutOfBand(byte[] hash, byte[] randomizer) {
-        //TODO(BT)
-        /*
         try {
-            return sService.createBondOutOfBand(this, hash, randomizer);
-        } catch (RemoteException e) {Log.e(TAG, "", e);}*/
+            return sService.createBondOutOfBand(mAddress, hash, randomizer);
+        } catch (RemoteException e) {Log.e(TAG, "", e);}
         return false;
     }
 
@@ -778,11 +734,9 @@ public final class BluetoothDevice implements Parcelable {
      * @hide
      */
     public boolean setDeviceOutOfBandData(byte[] hash, byte[] randomizer) {
-      //TODO(BT)
-      /*
       try {
-        return sService.setDeviceOutOfBandData(this, hash, randomizer);
-      } catch (RemoteException e) {Log.e(TAG, "", e);} */
+        return sService.setDeviceOutOfBandData(mAddress, hash, randomizer);
+      } catch (RemoteException e) {Log.e(TAG, "", e);}
       return false;
     }
 
@@ -794,12 +748,8 @@ public final class BluetoothDevice implements Parcelable {
      * @hide
      */
     public boolean cancelBondProcess() {
-        if (sService == null) {
-            Log.e(TAG, "BT not enabled. Cannot cancel Remote Device bond");
-            return false;
-        }
         try {
-            return sService.cancelBondProcess(this);
+            return sService.cancelBondProcess(mAddress);
         } catch (RemoteException e) {Log.e(TAG, "", e);}
         return false;
     }
@@ -815,12 +765,8 @@ public final class BluetoothDevice implements Parcelable {
      * @hide
      */
     public boolean removeBond() {
-        if (sService == null) {
-            Log.e(TAG, "BT not enabled. Cannot remove Remote Device bond");
-            return false;
-        }
         try {
-            return sService.removeBond(this);
+            return sService.removeBond(mAddress);
         } catch (RemoteException e) {Log.e(TAG, "", e);}
         return false;
     }
@@ -836,20 +782,24 @@ public final class BluetoothDevice implements Parcelable {
      * @return the bond state
      */
     public int getBondState() {
-        if (sService == null) {
-            Log.e(TAG, "BT not enabled. Cannot get bond state");
-            return BOND_NONE;
-        }
         try {
-            return sService.getBondState(this);
+            return sService.getBondState(mAddress);
         } catch (RemoteException e) {Log.e(TAG, "", e);}
-        catch (NullPointerException npe) {
-            // Handle case where bluetooth service proxy
-            // is already null.
-            Log.e(TAG, "NullPointerException for getBondState() of device ("+
-                getAddress()+")", npe);
-        }
         return BOND_NONE;
+    }
+
+    /** @hide */
+    public static String getBondStateName(int state) {
+        switch (state) {
+            case BOND_NONE:
+                return "BOND_NONE";
+            case BOND_BONDING:
+                return "BOND_BONDING";
+            case BOND_BONDED:
+                return "BOND_BONDED";
+            default:
+                return "UNKNOWN";
+        }
     }
 
     /**
@@ -859,12 +809,8 @@ public final class BluetoothDevice implements Parcelable {
      * @return Bluetooth class object, or null on error
      */
     public BluetoothClass getBluetoothClass() {
-        if (sService == null) {
-            Log.e(TAG, "BT not enabled. Cannot get Bluetooth Class");
-            return null;
-        }
         try {
-            int classInt = sService.getRemoteClass(this);
+            int classInt = sService.getRemoteClass(mAddress);
             if (classInt == BluetoothClass.ERROR) return null;
             return new BluetoothClass(classInt);
         } catch (RemoteException e) {Log.e(TAG, "", e);}
@@ -874,17 +820,11 @@ public final class BluetoothDevice implements Parcelable {
     /**
      * Get trust state of a remote device.
      * <p>Requires {@link android.Manifest.permission#BLUETOOTH}.
-     * @return true/false
      * @hide
      */
     public boolean getTrustState() {
-        if (sService == null) {
-            Log.e(TAG, "BT not enabled. Cannot get Remote Device Alias");
-            return false;
-        }
-
         try {
-            return sService.getRemoteTrust(this);
+            return sService.getTrustState(mAddress);
         } catch (RemoteException e) {
             Log.e(TAG, "", e);
         }
@@ -895,16 +835,11 @@ public final class BluetoothDevice implements Parcelable {
      * Set trust state for a remote device.
      * <p>Requires {@link android.Manifest.permission#BLUETOOTH_ADMIN}.
      * @param value the trust state value (true or false)
-     * @return true/false
      * @hide
      */
-    public boolean setTrust(boolean trustValue) {
-        if (sService == null) {
-            Log.e(TAG, "BT not enabled. Cannot set Remote Device name");
-            return false;
-        }
+    public boolean setTrust(boolean value) {
         try {
-            return sService.setRemoteTrust(this, trustValue);
+            return sService.setTrust(mAddress, value);
         } catch (RemoteException e) {
             Log.e(TAG, "", e);
         }
@@ -924,12 +859,8 @@ public final class BluetoothDevice implements Parcelable {
      *         or null on error
      */
      public ParcelUuid[] getUuids() {
-         if (sService == null) {
-            Log.e(TAG, "BT not enabled. Cannot get remote device Uuids");
-             return null;
-         }
         try {
-            return sService.getRemoteUuids(this);
+            return sService.getRemoteUuids(mAddress);
         } catch (RemoteException e) {Log.e(TAG, "", e);}
         return null;
     }
@@ -951,96 +882,64 @@ public final class BluetoothDevice implements Parcelable {
       */
      public boolean fetchUuidsWithSdp() {
         try {
-            return sService.fetchRemoteUuids(this);
+            return sService.fetchRemoteUuids(mAddress, null, null);
         } catch (RemoteException e) {Log.e(TAG, "", e);}
-            return false;
+        return false;
     }
-
-     /** @hide */
-     public boolean fetchMasInstances() {
-         if (sService == null) {
-             Log.e(TAG, "BT not enabled. Cannot query remote device for MAS instances");
-             return false;
-         }
-         try {
-             return sService.fetchRemoteMasInstances(this);
-         } catch (RemoteException e) {Log.e(TAG, "", e);}
-         return false;
-     }
 
     /** @hide */
     public int getServiceChannel(ParcelUuid uuid) {
-        //TODO(BT)
-        /*
          try {
-             return sService.getRemoteServiceChannel(this, uuid);
-         } catch (RemoteException e) {Log.e(TAG, "", e);}*/
+             return sService.getRemoteServiceChannel(mAddress, uuid);
+         } catch (RemoteException e) {Log.e(TAG, "", e);}
          return BluetoothDevice.ERROR;
     }
 
     /** @hide */
     public boolean setPin(byte[] pin) {
-        if (sService == null) {
-            Log.e(TAG, "BT not enabled. Cannot set Remote Device pin");
-            return false;
-        }
         try {
-            return sService.setPin(this, true, pin.length, pin);
+            return sService.setPin(mAddress, pin);
         } catch (RemoteException e) {Log.e(TAG, "", e);}
         return false;
     }
 
     /** @hide */
     public boolean setPasskey(int passkey) {
-        //TODO(BT)
-        /*
         try {
-            return sService.setPasskey(this, true, 4, passkey);
-        } catch (RemoteException e) {Log.e(TAG, "", e);}*/
+            return sService.setPasskey(mAddress, passkey);
+        } catch (RemoteException e) {Log.e(TAG, "", e);}
         return false;
     }
 
     /** @hide */
     public boolean setPairingConfirmation(boolean confirm) {
-        if (sService == null) {
-            Log.e(TAG, "BT not enabled. Cannot set pairing confirmation");
-            return false;
-        }
         try {
-            return sService.setPairingConfirmation(this, confirm);
+            return sService.setPairingConfirmation(mAddress, confirm);
         } catch (RemoteException e) {Log.e(TAG, "", e);}
         return false;
     }
 
     /** @hide */
     public boolean setRemoteOutOfBandData() {
-        // TODO(BT)
-        /*
         try {
-          return sService.setRemoteOutOfBandData(this);
-      } catch (RemoteException e) {Log.e(TAG, "", e);}*/
+          return sService.setRemoteOutOfBandData(mAddress);
+      } catch (RemoteException e) {Log.e(TAG, "", e);}
       return false;
     }
 
     /** @hide */
     public boolean cancelPairingUserInput() {
-        if (sService == null) {
-            Log.e(TAG, "BT not enabled. Cannot create pairing user input");
-            return false;
-        }
         try {
-            return sService.cancelBondProcess(this);
+            return sService.cancelPairingUserInput(mAddress);
         } catch (RemoteException e) {Log.e(TAG, "", e);}
         return false;
     }
 
     /** @hide */
     public boolean isBluetoothDock() {
-        // TODO(BT)
-        /*
         try {
-            return sService.isBluetoothDock(this);
-        } catch (RemoteException e) {Log.e(TAG, "", e);}*/
+            return sService.isBluetoothDock(mAddress);
+        } catch (RemoteException e) {Log.e(TAG, "", e);}
         return false;
     }
 
@@ -1218,10 +1117,15 @@ public final class BluetoothDevice implements Parcelable {
                                      BluetoothGattCallback callback) {
         // TODO(Bluetooth) check whether platform support BLE
         //     Do the check here or in GattServer?
+        /** Engle, TODO
         BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
-        IBluetoothManager managerService = adapter.getBluetoothManager();
+        IBinder b = ServiceManager.getService(BluetoothAdapter.BLUETOOTH_SERVICE);
+        if (null == b)
+            return null;
+
+        IBluetooth service = IBluetooth.Stub.asInterface(b);
         try {
-            IBluetoothGatt iGatt = managerService.getBluetoothGatt();
+            IBluetoothGatt iGatt = service.getBluetoothGatt();
             if (iGatt == null) {
                 // BLE is not supported
                 return null;
@@ -1230,6 +1134,7 @@ public final class BluetoothDevice implements Parcelable {
             gatt.connect(autoConnect, callback);
             return gatt;
         } catch (RemoteException e) {Log.e(TAG, "", e);}
+        */
         return null;
     }
 }

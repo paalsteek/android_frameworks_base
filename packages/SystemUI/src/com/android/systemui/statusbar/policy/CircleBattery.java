@@ -231,9 +231,11 @@ public class CircleBattery extends ImageView implements BatteryController.Batter
             level = 100; // Draw all the circle;
         } else if (level < mWarningLevel) {
             usePaint = mPaintRed;
-        } else if (getBatteryStatus() == BatteryManager.BATTERY_STATUS_FULL) {
-            level = 100;
-        }
+        } 
+        // Engle, 去掉这种纠正
+        // else if (getBatteryStatus() == BatteryManager.BATTERY_STATUS_FULL) {
+        //    level = 100;
+        // }
 
         // draw thin gray ring first
         canvas.drawArc(drawRect, 270, 360, false, mPaintGray);
@@ -246,7 +248,12 @@ public class CircleBattery extends ImageView implements BatteryController.Batter
             canvas.drawText("?", textX, mTextY, mPaintFont);
         } else if (level < 100 && mPercentage) {
             mPaintFont.setColor(usePaint.getColor());
-            canvas.drawText(Integer.toString(level), textX, mTextY, mPaintFont);
+            //Engle, 电量满时显示“F”
+            if (level < 100) {
+                canvas.drawText(Integer.toString(level), textX, mTextY, mPaintFont);
+            } else {
+                canvas.drawText("F", textX, mTextY, mPaintFont);
+            }
         }
 
     }

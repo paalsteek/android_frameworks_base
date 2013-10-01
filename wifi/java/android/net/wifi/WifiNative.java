@@ -56,6 +56,11 @@ public class WifiNative {
 
     public native static boolean unloadDriver();
 
+    // Engle, add for wifi
+    public native static boolean loadHotspotDriver();
+
+    public native static boolean unloadHotspotDriver();
+
     public native static boolean startSupplicant(boolean p2pSupported);
 
     /* Sends a kill signal to supplicant. To be used when we have lost connection
@@ -213,7 +218,9 @@ public class WifiNative {
      * MASK=<N> see wpa_supplicant/src/common/wpa_ctrl.h for details
      */
     public String scanResults(int sid) {
-        return doStringCommand("BSS RANGE=" + sid + "- MASK=0x21987");
+        // Engle, for old driver compable, merge from CM 10 (JB-4.1.2)
+        return doStringCommand("SCAN_RESULTS");
+        //return doStringCommand("BSS RANGE=" + sid + "- MASK=0x21987");
     }
 
     public boolean startDriver() {
@@ -282,6 +289,18 @@ public class WifiNative {
     public boolean stopFilteringMulticastV6Packets() {
         return doBooleanCommand("DRIVER RXFILTER-STOP")
             && doBooleanCommand("DRIVER RXFILTER-ADD 3")
+            && doBooleanCommand("DRIVER RXFILTER-START");
+    }
+
+    // Engle, Quarx2K
+    /**
+     * Set the initial state of Rx filters.
+     * @return {@code true} if the operation succeeded, {@code false} otherwise
+     */
+    public boolean initializeRxFilters() {
+        return doBooleanCommand("DRIVER RXFILTER-ADD 0")
+            && doBooleanCommand("DRIVER RXFILTER-ADD 1")
+            && doBooleanCommand("DRIVER RXFILTER-ADD 2")
             && doBooleanCommand("DRIVER RXFILTER-START");
     }
 

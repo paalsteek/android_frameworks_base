@@ -1635,7 +1635,7 @@ public class ConnectivityService extends IConnectivityManager.Stub {
         //       asynchronous.
         enforceAccessPermission();
         boolean retVal = Settings.Global.getInt(mContext.getContentResolver(),
-                Settings.Global.MOBILE_DATA, 1) == 1;
+                Settings.Global.MOBILE_DATA, 0) == 1; // Engle, 默认禁用移动数据
         if (VDBG) log("getMobileDataEnabled returning " + retVal);
         return retVal;
     }

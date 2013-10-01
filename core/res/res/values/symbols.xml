@@ -244,6 +244,8 @@
   <java-symbol type="bool" name="action_bar_embed_tabs_pre_jb" />
   <java-symbol type="bool" name="action_bar_expanded_action_views_exclusive" />
   <java-symbol type="bool" name="config_allowActionMenuItemTextWithIcon" />
+  <!-- Engle, 添加4.1的蓝牙 -->
+  <java-symbol type="bool" name="config_bluetooth_adapter_quick_switch" />
   <java-symbol type="bool" name="config_bluetooth_address_validation" />
   <java-symbol type="bool" name="config_bluetooth_sco_off_call" />
   <java-symbol type="bool" name="config_cellBroadcastAppLinks" />
@@ -1869,6 +1871,10 @@
    Resources added in version 10 of CyanogenMod
    =============================================================== -->
   <eat-comment />
+
+  <!-- Engle, 添加Moto的服务 -->
+  <java-symbol type="string" name="config_legacyUmsLunFile" />
+  <java-symbol type="array" name="config_vendorServices" />
 
   <!-- Config.xml entries -->
   <java-symbol type="bool" name="config_forceDisableHardwareKeyboard" />

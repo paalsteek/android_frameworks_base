@@ -342,6 +342,9 @@ public class PhoneWindowManager implements WindowManagerPolicy {
     private boolean mAnimatingWindows;
     private boolean mNeedUpdateSettings;
 
+    // Engle, 添加相机键唤醒
+    boolean mFocusWakeScreen;
+
     private static final class PointerLocationInputEventReceiver extends InputEventReceiver {
         private final PointerLocationView mView;
 
@@ -653,6 +656,11 @@ public class PhoneWindowManager implements WindowManagerPolicy {
                     UserHandle.USER_ALL);
             resolver.registerContentObserver(Settings.System.getUriFor(
                     Settings.System.HARDWARE_KEY_REBINDING), false, this,
+                    UserHandle.USER_ALL);
+
+            // Engle, 添加相机键唤醒
+            resolver.registerContentObserver(Settings.System.getUriFor(
+                    Settings.System.FOCUS_WAKE_SCREEN), false, this,
                     UserHandle.USER_ALL);
 
             updateSettings();
@@ -1391,6 +1399,10 @@ public class PhoneWindowManager implements WindowManagerPolicy {
                     Settings.System.VOLBTN_MUSIC_CONTROLS, 1, UserHandle.USER_CURRENT) == 1);
 
             updateKeyAssignments();
+
+            // Engle, 添加相机键唤醒
+            mFocusWakeScreen = (Settings.System.getIntForUser(resolver,
+                    Settings.System.FOCUS_WAKE_SCREEN, 0, UserHandle.USER_CURRENT) == 1);
 
             int expandedDesktopStyle = Settings.System.getIntForUser(resolver,
                     Settings.System.EXPANDED_DESKTOP_STYLE, 0, UserHandle.USER_CURRENT);
@@ -4435,6 +4447,21 @@ public class PhoneWindowManager implements WindowManagerPolicy {
                     }
                 }
                 break;
+            }
+
+            // Engle, 添加相机键唤醒
+            case KeyEvent.KEYCODE_FOCUS: {
+                if (down) {
+                    if (isScreenOn || !mFocusWakeScreen) {
+                        break;
+                    } else if (keyguardActive) {
+                        keyCode = KeyEvent.KEYCODE_POWER;
+                        mKeyguardMediator.onWakeKeyWhenKeyguardShowingTq(keyCode);
+                    } else {
+                        result |= ACTION_WAKE_UP;
+                        break;
+                    }
+                }
             }
         }
         return result;

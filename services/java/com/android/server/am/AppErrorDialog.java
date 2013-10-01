@@ -34,6 +34,9 @@ class AppErrorDialog extends BaseErrorDialog {
     static final int FORCE_QUIT = 0;
     static final int FORCE_QUIT_AND_REPORT = 1;
 
+    // Engle, 添加程序异常时默认使用日志收集器反馈信息
+    static final int FORCE_QUIT_AND_REPORT_BUILDER = 2;
+
     // 5-minute timeout, then we automatically dismiss the crash dialog
     static final long DISMISS_TIMEOUT = 1000 * 60 * 5;
     
@@ -69,6 +72,10 @@ class AppErrorDialog extends BaseErrorDialog {
             setButton(DialogInterface.BUTTON_NEGATIVE,
                     res.getText(com.android.internal.R.string.report),
                     mHandler.obtainMessage(FORCE_QUIT_AND_REPORT));
+        } else { // Engle, 添加程序异常时默认使用日志收集器反馈信息
+            setButton(DialogInterface.BUTTON_NEGATIVE,
+                    res.getText(com.android.internal.R.string.report),
+                    mHandler.obtainMessage(FORCE_QUIT_AND_REPORT_BUILDER));
         }
 
         setTitle(res.getText(com.android.internal.R.string.aerr_title));

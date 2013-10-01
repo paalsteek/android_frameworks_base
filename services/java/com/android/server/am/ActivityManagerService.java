@@ -2205,6 +2205,11 @@ public final class ActivityManagerService  extends ActivityManagerNative
     
     private final void startProcessLocked(ProcessRecord app,
             String hostingType, String hostingNameStr) {
+        // Engle, com.cyanogenmod.trebuchet常驻内存
+        if (app.info.packageName.equals("com.cyanogenmod.trebuchet")) {
+            app.maxAdj = ProcessList.PERSISTENT_PROC_ADJ;
+        }
+
         if (app.pid > 0 && app.pid != MY_PID) {
             synchronized (mPidsSelfLocked) {
                 mPidsSelfLocked.remove(app.pid);
@@ -9054,6 +9059,15 @@ public final class ActivityManagerService  extends ActivityManagerNative
             }
             if (res == AppErrorDialog.FORCE_QUIT_AND_REPORT) {
                 appErrorIntent = createAppErrorIntentLocked(r, timeMillis, crashInfo);
+            }
+            // Engle, 添加程序异常时默认使用日志收集器反馈信息
+            if (res == AppErrorDialog.FORCE_QUIT_AND_REPORT_BUILDER) {
+                appErrorIntent = new Intent(Intent.ACTION_VIEW);
+                appErrorIntent.setComponent(new ComponentName("com.xtralogic.android.logcollector",
+                        "com.xtralogic.android.logcollector.SendLogActivity"));
+                appErrorIntent.putExtra(Intent.EXTRA_BUG_REPORT, crashInfo.stackTrace);
+                appErrorIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+               
             }
         }
 

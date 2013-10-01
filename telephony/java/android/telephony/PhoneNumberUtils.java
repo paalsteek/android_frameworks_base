@@ -30,6 +30,8 @@ import android.net.Uri;
 import android.os.SystemProperties;
 import android.provider.Contacts;
 import android.provider.ContactsContract;
+// Engle, 添加IP拨号支持
+import android.provider.Settings;
 import android.text.Editable;
 import android.text.SpannableStringBuilder;
 import android.text.TextUtils;
@@ -2540,6 +2542,50 @@ public class PhoneNumberUtils
         }
 
         return true;
+    }
+    
+    /**
+     * Return the phone number with IP phone number suffix if alown IP phone number and it has value.
+     * @param context
+     * @param number
+     * @return
+     * @hide
+     */
+    // Engle, 添加IP拨号支持
+    public static String appendIPNumber(Context context, String number) {
+        PhoneNumberUtils.log("before convert number is " + number);
+        if (!PhoneNumberUtils.isVoiceMailNumber(number) && !PhoneNumberUtils.isUriNumber(number)) {
+            String ipNumber = Settings.System.getString(context.getContentResolver(),
+                    Settings.System.PHONE_IP_NUMBER);
+            if (ipNumber != null) {
+                String normalNumber = PhoneNumberUtils.normalizeNumber(number);
+                if (normalNumber.indexOf(ipNumber) != 0) {
+                    number = ipNumber + trimSmsNumber(number);
+                }
+            }
+        }
+        PhoneNumberUtils.log("after convert number is " + number);
+        return number;
+    }
+    
+    /**
+     * Trim the contruy phone number suffix.
+     * @param context
+     * @param number
+     * @return
+     * @hide
+     */
+    // Engle,去掉国家代号的方法
+    public final static String trimSmsNumber(String number) {
+        String s = number;
+        String prefix = "";
+        if (Locale.CHINA.equals(Locale.getDefault())) {
+            prefix = "+86";
+        }
+        if (prefix.length() > 0 && number.startsWith(prefix)) {
+            s = number.substring(prefix.length());
+        }
+        return s;
     }
 
     //==== End of utility methods used only in compareStrictly() =====

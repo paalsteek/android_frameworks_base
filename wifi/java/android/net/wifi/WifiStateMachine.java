@@ -489,6 +489,9 @@ public class WifiStateMachine extends StateMachine {
     /* Waiting for untether confirmation before stopping soft Ap */
     private State mUntetheringState = new UntetheringState();
 
+    // Engle, 添加便携式WLAN支持
+    private boolean mIsSoftApDriverLoad = false;
+
     private class TetherStateChange {
         ArrayList<String> available;
         ArrayList<String> active;
@@ -1547,6 +1550,138 @@ public class WifiStateMachine extends StateMachine {
         }
     }
 
+    // Engle, for old driver compable
+    /**
+     * Parse the scan result line passed to us by wpa_supplicant (helper).
+     * @param line the line to parse
+     * @return the {@link ScanResult} object
+     */
+    private ScanResult parseScanResult(String line) {
+        ScanResult scanResult = null;
+        if (line != null) {
+            /*
+             * Cache implementation (LinkedHashMap) is not synchronized, thus,
+             * must synchronized here!
+             */
+            synchronized (mScanResultCache) {
+                String[] result = scanResultPattern.split(line);
+                if (3 <= result.length && result.length <= 5) {
+                    String bssid = result[0];
+                    // bssid | frequency | level | flags | ssid
+                    int frequency;
+                    int level;
+                    try {
+                        frequency = Integer.parseInt(result[1]);
+                        level = Integer.parseInt(result[2]);
+                        /* some implementations avoid negative values by adding 256
+                         * so we need to adjust for that here.
+                         */
+                        if (level > 0) level -= 256;
+                    } catch (NumberFormatException e) {
+                        frequency = 0;
+                        level = 0;
+                    }
+
+                    /*
+                     * The formatting of the results returned by
+                     * wpa_supplicant is intended to make the fields
+                     * line up nicely when printed,
+                     * not to make them easy to parse. So we have to
+                     * apply some heuristics to figure out which field
+                     * is the SSID and which field is the flags.
+                     */
+                    String ssid;
+                    String flags;
+                    if (result.length == 4) {
+                        if (result[3].charAt(0) == '[') {
+                            flags = result[3];
+                            ssid = "";
+                        } else {
+                            flags = "";
+                            ssid = result[3];
+                        }
+                    } else if (result.length == 5) {
+                        flags = result[3];
+                        ssid = result[4];
+                    } else {
+                        // Here, we must have 3 fields: no flags and ssid
+                        // set
+                        flags = "";
+                        ssid = "";
+                    }
+
+                    // bssid + ssid is the hash key
+                    String key = bssid + ssid;
+                    scanResult = mScanResultCache.get(key);
+                    if (scanResult != null) {
+                        scanResult.level = level;
+                        scanResult.SSID = ssid;
+                        scanResult.capabilities = flags;
+                        scanResult.frequency = frequency;
+                    } else {
+                        // Do not add scan results that have no SSID set
+                        if (0 < ssid.trim().length()) {
+                            scanResult =
+                                new ScanResult(WifiSsid.createFromAsciiEncoded(ssid),
+                                    bssid, flags, level, frequency, 0);
+                            mScanResultCache.put(key, scanResult);
+                        }
+                    }
+                } else {
+                    loge("Misformatted scan result text with " +
+                          result.length + " fields: " + line);
+                }
+            }
+        }
+
+        return scanResult;
+    }
+
+    // Engle, for old driver compable, merge from CM 10 (JB-4.1.2)
+    /**
+     * scanResults input format
+     * 00:bb:cc:dd:cc:ee       2427    166     [WPA-EAP-TKIP][WPA2-EAP-CCMP]   Net1
+     * 00:bb:cc:dd:cc:ff       2412    165     [WPA-EAP-TKIP][WPA2-EAP-CCMP]   Net2
+     */
+    private void setScanResults(String scanResults) {
+        if (scanResults == null) {
+            scanResults = mWifiNative.scanResults(0);
+            if (scanResults == null) {
+                return;
+            }
+        }
+
+        List<ScanResult> scanList = new ArrayList<ScanResult>();
+
+        int lineCount = 0;
+
+        int scanResultsLen = scanResults.length();
+        // Parse the result string, keeping in mind that the last line does
+        // not end with a newline.
+        for (int lineBeg = 0, lineEnd = 0; lineEnd <= scanResultsLen; ++lineEnd) {
+            if (lineEnd == scanResultsLen || scanResults.charAt(lineEnd) == '\n') {
+                ++lineCount;
+
+                if (lineCount == 1) {
+                    lineBeg = lineEnd + 1;
+                    continue;
+                }
+                if (lineEnd > lineBeg) {
+                    String line = scanResults.substring(lineBeg, lineEnd);
+                    ScanResult scanResult = parseScanResult(line);
+                    if (scanResult != null) {
+                        scanList.add(scanResult);
+                    } else {
+                        //TODO: hidden network handling
+                    }
+                }
+                lineBeg = lineEnd + 1;
+            }
+        }
+
+        mScanResults = scanList;
+    }
+
     /*
      * Fetch RSSI and linkspeed on current connection
      */
@@ -2116,7 +2251,16 @@ public class WifiStateMachine extends StateMachine {
     class InitialState extends State {
         @Override
         public void enter() {
-            mWifiNative.unloadDriver();
+            // Engle, 添加WLAN热点支持, 开始
+            // mWifiNative.unloadDriver();
+            if (!mIsSoftApDriverLoad) {
+                WifiNative.unloadDriver();
+            } else {
+                WifiNative.unloadHotspotDriver();
+                mIsSoftApDriverLoad = false;
+            }
+
+            // Engle, 添加WLAN热点支持, 结束
 
             if (mWifiP2pChannel == null) {
                 mWifiP2pChannel = new AsyncChannel();
@@ -2136,6 +2280,8 @@ public class WifiStateMachine extends StateMachine {
         public boolean processMessage(Message message) {
             switch (message.what) {
                 case CMD_START_SUPPLICANT:
+                    // Engle, 添加WLAN热点支持
+                    mIsSoftApDriverLoad = false;
                     if (mWifiNative.loadDriver()) {
                         try {
                             mNwService.wifiFirmwareReload(mInterfaceName, "STA");
@@ -2181,10 +2327,13 @@ public class WifiStateMachine extends StateMachine {
                     }
                     break;
                 case CMD_START_AP:
-                    if (mWifiNative.loadDriver()) {
+                    // Engle, 添加WLAN热点支持
+                    mIsSoftApDriverLoad = true;
+                    if (mWifiNative.loadHotspotDriver()) {
                         setWifiApState(WIFI_AP_STATE_ENABLING);
                         transitionTo(mSoftApStartingState);
                     } else {
+                        mIsSoftApDriverLoad = false;
                         loge("Failed to load driver for softap");
                     }
                 default:
@@ -2324,7 +2473,7 @@ public class WifiStateMachine extends StateMachine {
                     sendMessageDelayed(CMD_START_SUPPLICANT, SUPPLICANT_RESTART_INTERVAL_MSECS);
                     break;
                 case WifiMonitor.SCAN_RESULTS_EVENT:
-                    setScanResults();
+                    setScanResults(null);
                     sendScanResultsAvailableBroadcast();
                     mScanResultIsPending = false;
                     break;
@@ -2498,7 +2647,8 @@ public class WifiStateMachine extends StateMachine {
             setFrequencyBand();
             /* initialize network state */
             setNetworkDetailedState(DetailedState.DISCONNECTED);
-
+            /* Engle, set Rx filters to initial state */
+            mWifiNative.initializeRxFilters();
             /* Remove any filtering on Multicast v6 at start */
             mWifiNative.stopFilteringMulticastV6Packets();
 
@@ -2761,7 +2911,9 @@ public class WifiStateMachine extends StateMachine {
                 case CMD_RECONNECT:
                     deferMessage(message);
                     break;
-                default:
+                default:// Engle, Quarx2K
+                    log(getName() + " message not handled 0x" + Integer.toHexString(message.what) +
+                         " - " + (message.what - BASE) + "\n");
                     return NOT_HANDLED;
             }
             return HANDLED;

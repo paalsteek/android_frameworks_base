@@ -417,4 +417,9 @@
         <item>TUV</item><!-- 8 -->
         <item>WXYZ</item><!-- 9 -->
     </string-array>
+
+    <!-- Engle, 添加定制服务-->
+    <string-array name="config_vendorServices">
+        <item>/system/framework/com.motorola.android.location.jar:com.android.server.LocationProxyService</item>
+    </string-array>
 </resources>

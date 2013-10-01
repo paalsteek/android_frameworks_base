@@ -27,6 +27,7 @@ import android.content.ClipboardManager;
 import android.content.ComponentCallbacks2;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.DialogInterface.OnCancelListener;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
@@ -589,13 +590,16 @@ public final class WebViewClassic implements WebViewProvider, WebViewProvider.Sc
     private class PastePopupWindow extends PopupWindow implements View.OnClickListener {
         private ViewGroup mContentView;
         private TextView mPasteTextView;
+        // Engle, 添加切换输入法
+        private TextView mSwitchImeTextView;
 
         public PastePopupWindow() {
             super(mContext, null,
                     com.android.internal.R.attr.textSelectHandleWindowStyle);
             setClippingEnabled(true);
             LinearLayout linearLayout = new LinearLayout(mContext);
-            linearLayout.setOrientation(LinearLayout.HORIZONTAL);
+            // Engle, 添加切换输入法
+            linearLayout.setOrientation(LinearLayout.VERTICAL);
             mContentView = linearLayout;
             mContentView.setBackgroundResource(
                     com.android.internal.R.drawable.text_edit_paste_window);
@@ -612,11 +616,27 @@ public final class WebViewClassic implements WebViewProvider, WebViewProvider.Sc
             mContentView.addView(mPasteTextView);
             mPasteTextView.setText(com.android.internal.R.string.paste);
             mPasteTextView.setOnClickListener(this);
+
+            // Engle, 添加切换输入法
+            mSwitchImeTextView = (TextView) inflater.inflate(
+                    com.android.internal.R.layout.text_edit_action_popup_text, null);
+            mSwitchImeTextView.setLayoutParams(wrapContent);
+            mContentView.addView(mSwitchImeTextView);
+            mSwitchImeTextView.setText(com.android.internal.R.string.inputMethod);
+            mSwitchImeTextView.setOnClickListener(this);
             this.setContentView(mContentView);
         }
 
         public void show(Point cursorBottom, Point cursorTop,
                 int windowLeft, int windowTop) {
+            // Engle, 添加切换输入法
+            ClipboardManager cm = (ClipboardManager)(mContext
+                    .getSystemService(Context.CLIPBOARD_SERVICE));
+            if (cm.hasPrimaryClip()) {
+                mPasteTextView.setVisibility(View.VISIBLE);
+            } else {
+                mPasteTextView.setVisibility(View.GONE);
+            }
             measureContent();
 
             int width = mContentView.getMeasuredWidth();
@@ -645,7 +665,16 @@ public final class WebViewClassic implements WebViewProvider, WebViewProvider.Sc
 
         @Override
         public void onClick(View view) {
-            pasteFromClipboard();
+            // Engle, 添加右键菜单切换输入法
+            if (view.equals(mSwitchImeTextView)) {
+                InputMethodManager imm = InputMethodManager.peekInstance();
+                if (imm != null) {
+                    imm.showInputMethodPicker();
+                }
+            } else if (view.equals(mPasteTextView)) {
+                pasteFromClipboard(); 
+            }
+           
             selectionDone();
         }
 
@@ -5232,10 +5261,8 @@ public final class WebViewClassic implements WebViewProvider, WebViewProvider.Sc
         return true;
     }
 
-    private void showPasteWindow() {
-        ClipboardManager cm = (ClipboardManager)(mContext
-                .getSystemService(Context.CLIPBOARD_SERVICE));
-        if (cm.hasPrimaryClip()) {
+    // Engle, 添加切换输入法, 删除粘帖版是否为空的判断
+    private void showPasteWindow() {      
             Point cursorPoint = new Point(contentToViewX(mSelectCursorBase.x),
                     contentToViewY(mSelectCursorBase.y));
             Point cursorTop = calculateBaseCaretTop();
@@ -5252,7 +5279,6 @@ public final class WebViewClassic implements WebViewProvider, WebViewProvider.Sc
                 mPasteWindow = new PastePopupWindow();
             }
             mPasteWindow.show(cursorPoint, cursorTop, location[0], location[1]);
-        }
     }
 
     /**

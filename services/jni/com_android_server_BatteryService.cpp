@@ -352,6 +352,10 @@ int register_android_server_BatteryService(JNIEnv* env)
                 if (access(path, R_OK) == 0)
                     gPaths.batteryPresentPath = path;
                 path.clear();
+                // Engle, 修复1%电量显示
+                //path.appendFormat("%s/%s/capacity", POWER_SUPPLY_PATH, name);
+                //if (access(path, R_OK) == 0)
+                //    gPaths.batteryCapacityPath = path;
 
                 /* For some weird, unknown reason Motorola phones provide
                 * capacity information only in 10% steps in the 'capacity'
@@ -365,11 +369,11 @@ int register_android_server_BatteryService(JNIEnv* env)
                     && (!strcmp(valueChargeCounter, "1"))) {
                    path.appendFormat("%s/%s/charge_counter", POWER_SUPPLY_PATH, name);
                    if (access(path, R_OK) == 0)
-                       gPaths.batteryCapacityPath = path;
+                       gPaths.batteryCapacityPath = strdup(path);
                 } else {
                     path.appendFormat("%s/%s/capacity", POWER_SUPPLY_PATH, name);
                     if (access(path, R_OK) == 0)
-                        gPaths.batteryCapacityPath = path;
+                        gPaths.batteryCapacityPath = strdup(path);
                 }
 
 

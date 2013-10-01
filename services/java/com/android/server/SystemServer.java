@@ -21,6 +21,8 @@ import android.app.ActivityManagerNative;
 import android.bluetooth.BluetoothAdapter;
 import android.content.ComponentName;
 import android.content.ContentResolver;
+// Engle, Quarx2K
+import android.content.ContextWrapper;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
@@ -34,12 +36,16 @@ import android.net.wifi.p2p.WifiP2pService;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.HandlerThread;
+// Engle, Quarx2K
+import android.os.IBinder;
 import android.os.Looper;
 import android.os.RemoteException;
 import android.os.ServiceManager;
 import android.os.StrictMode;
 import android.os.SystemClock;
 import android.os.SystemProperties;
+import android.server.BluetoothA2dpService;
+import android.server.BluetoothService;
 import android.os.UserHandle;
 import android.provider.Settings;
 import android.service.dreams.DreamService;
@@ -73,6 +79,8 @@ import com.android.server.usb.UsbService;
 import com.android.server.wifi.WifiService;
 import com.android.server.wm.WindowManagerService;
 
+// Engle, Quarx2K
+import dalvik.system.DexClassLoader;
 import dalvik.system.VMRuntime;
 import dalvik.system.Zygote;
 
@@ -81,6 +89,8 @@ import java.util.Timer;
 import java.util.TimerTask;
 import com.stericsson.hardware.fm.FmReceiverService;
 import com.stericsson.hardware.fm.FmTransmitterService;
+// Engle, Quarx2K
+import java.lang.reflect.Constructor;
 
 class ServerThread extends Thread {
     private static final String TAG = "SystemServer";
@@ -164,7 +174,8 @@ class ServerThread extends Thread {
         IPackageManager pm = null;
         Context context = null;
         WindowManagerService wm = null;
-        BluetoothManagerService bluetooth = null;
+        BluetoothService bluetooth = null;
+        BluetoothA2dpService bluetoothA2dp = null;
         DockObserver dock = null;
         RotationSwitchObserver rotateSwitch = null;
         UsbService usb = null;
@@ -362,9 +373,23 @@ class ServerThread extends Thread {
                        (PackageManager.FEATURE_BLUETOOTH)) {
                 Slog.i(TAG, "No Bluetooth Service (Bluetooth Hardware Not Present)");
             } else {
-                Slog.i(TAG, "Bluetooth Manager Service");
-                bluetooth = new BluetoothManagerService(context);
-                ServiceManager.addService(BluetoothAdapter.BLUETOOTH_MANAGER_SERVICE, bluetooth);
+                Slog.i(TAG, "Bluetooth Service");
+                bluetooth = new BluetoothService(context);
+                ServiceManager.addService(BluetoothAdapter.BLUETOOTH_SERVICE, bluetooth);
+                bluetooth.initAfterRegistration();
+
+                if (!"0".equals(SystemProperties.get("system_init.startaudioservice"))) {
+                    bluetoothA2dp = new BluetoothA2dpService(context, bluetooth);
+                    ServiceManager.addService(BluetoothA2dpService.BLUETOOTH_A2DP_SERVICE,
+                                              bluetoothA2dp);
+                    bluetooth.initAfterA2dpRegistration();
+                }
+
+                int bluetoothOn = Settings.Global.getInt(mContentResolver,
+                    Settings.Global.BLUETOOTH_ON, 0);
+                if (bluetoothOn != 0) {
+                    bluetooth.enable();
+                }
             }
 
         } catch (RuntimeException e) {
@@ -547,6 +572,8 @@ class ServerThread extends Thread {
                 reportWtf("starting Service Discovery Service", e);
             }
 
+            // Engle, 去掉FM Service
+            /**
             try {
                 Slog.i(TAG, "FM receiver Service");
                 ServiceManager.addService("fm_receiver",
@@ -562,6 +589,8 @@ class ServerThread extends Thread {
             } catch (Throwable e) {
                 Slog.e(TAG, "Failure starting FM transmitter Service", e);
             }
+           */
+
             try {
                 Slog.i(TAG, "UpdateLock Service");
                 ServiceManager.addService(Context.UPDATE_LOCK_SERVICE,
@@ -787,6 +816,43 @@ class ServerThread extends Thread {
                 ServiceManager.addService("commontime_management", commonTimeMgmtService);
             } catch (Throwable e) {
                 reportWtf("starting CommonTimeManagementService service", e);
+            }
+
+            // Engle, Quarx2K
+            String[] vendorServices = context.getResources().getStringArray(
+                    com.android.internal.R.array.config_vendorServices);
+
+            if (vendorServices != null && vendorServices.length > 0) {
+
+                String cachePath = new ContextWrapper(context).getCacheDir().getAbsolutePath();
+                ClassLoader parentLoader = ClassLoader.getSystemClassLoader();
+
+                for (String service : vendorServices) {
+                    String[] parts = service.split(":");
+                    if (parts.length != 2) {
+                        Slog.e(TAG, "Found invalid vendor service " + service);
+                        continue;
+                    }
+
+                    String jarPath = parts[0];
+                    String className = parts[1];
+
+                    try {
+                        /* Intentionally skipping all null checks in this block, as we also want an
+                           error message if class loading or ctor resolution failed. The catch block
+                           conveniently provides that for us also for NullPointerException */
+
+                        DexClassLoader loader = new DexClassLoader(jarPath, cachePath, null, parentLoader);
+                        Class<?> klass = loader.loadClass(className);
+                        Constructor<?> ctor = klass.getDeclaredConstructors()[0];
+                        Object instance = ctor.newInstance(context);
+
+                        ServiceManager.addService(klass.getSimpleName(), (IBinder) instance);
+                        Slog.i(TAG, "Vendor service " + className + " started.");
+                    } catch (Exception e) {
+                        Slog.e(TAG, "Starting vendor service " + className + " failed.", e);
+                    }
+                }
             }
 
             try {

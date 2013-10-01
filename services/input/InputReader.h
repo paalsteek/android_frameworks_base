@@ -990,6 +990,8 @@ private:
     uint32_t mUpdatedSwitchMask;
 
     void processSwitch(int32_t switchCode, int32_t switchValue);
+    // Engle, for old device, merge for 4.1.2, there is no EV_SYN when open or close the keyboard slide
+    void processSwitch(nsecs_t when, int32_t switchCode, int32_t switchValue);
     void sync(nsecs_t when);
 };
 

@@ -2149,27 +2149,19 @@ public class AudioService extends IAudioService.Stub implements OnFinished {
                                 mScoAudioMode =
                                         (targetSdkVersion < Build.VERSION_CODES.JELLY_BEAN_MR2) ?
                                                 SCO_MODE_VIRTUAL_CALL : SCO_MODE_RAW;
-                                /*
-                                 * Raw mode causes some issues on HFP head units,
-                                 * apparently when doing PBAP, so disregard it on
-                                 * those for now and keep using VIRTUAL_CALL
-                                 */
-                                if (mBluetoothHeadsetDevice != null) {
-                                    BluetoothClass btClass = mBluetoothHeadsetDevice.getBluetoothClass();
-                                    if (btClass.getDeviceClass() ==
-                                        BluetoothClass.Device.AUDIO_VIDEO_HANDSFREE  &&
-                                        btClass.hasService(BluetoothClass.Service.OBJECT_TRANSFER)) {
-                                            mScoAudioMode = SCO_MODE_VIRTUAL_CALL;
-                                    }
-                                }
                                 if (mBluetoothHeadset != null && mBluetoothHeadsetDevice != null) {
                                     boolean status;
+                                    status = mBluetoothHeadset.startScoUsingVirtualVoiceCall(
+                                                                            mBluetoothHeadsetDevice);
+                                    // Engle, TODO
+                                    /*
                                     if (mScoAudioMode == SCO_MODE_RAW) {
                                         status = mBluetoothHeadset.connectAudio();
                                     } else {
                                         status = mBluetoothHeadset.startScoUsingVirtualVoiceCall(
                                                                             mBluetoothHeadsetDevice);
                                     }
+                                    */
                                     if (status) {
                                         mScoAudioState = SCO_STATE_ACTIVE_INTERNAL;
                                     } else {
@@ -2193,12 +2185,17 @@ public class AudioService extends IAudioService.Stub implements OnFinished {
                     if (mScoAudioState == SCO_STATE_ACTIVE_INTERNAL) {
                         if (mBluetoothHeadset != null && mBluetoothHeadsetDevice != null) {
                             boolean status;
+                            status = mBluetoothHeadset.stopScoUsingVirtualVoiceCall(
+                                                                    mBluetoothHeadsetDevice);
+                            // Engle, TODO
+                            /*
                             if (mScoAudioMode == SCO_MODE_RAW) {
                                 status = mBluetoothHeadset.disconnectAudio();
                             } else {
                                 status = mBluetoothHeadset.stopScoUsingVirtualVoiceCall(
                                                                         mBluetoothHeadsetDevice);
                             }
+                            */
                             if (!status) {
                                 mScoAudioState = SCO_STATE_INACTIVE;
                                 broadcastScoConnectionState(
@@ -2376,20 +2373,30 @@ public class AudioService extends IAudioService.Stub implements OnFinished {
                             switch (mScoAudioState) {
                             case SCO_STATE_ACTIVATE_REQ:
                                 mScoAudioState = SCO_STATE_ACTIVE_INTERNAL;
+                                status = mBluetoothHeadset.startScoUsingVirtualVoiceCall(
+                                                                        mBluetoothHeadsetDevice);
+                                // Engle, TODO
+                                /*
                                 if (mScoAudioMode == SCO_MODE_RAW) {
                                     status = mBluetoothHeadset.connectAudio();
                                 } else {
                                     status = mBluetoothHeadset.startScoUsingVirtualVoiceCall(
                                                                         mBluetoothHeadsetDevice);
                                 }
+                                */
                                 break;
                             case SCO_STATE_DEACTIVATE_REQ:
+                                status = mBluetoothHeadset.stopScoUsingVirtualVoiceCall(
+                                                                        mBluetoothHeadsetDevice);
+                                // Engle, TODO
+                                /*
                                 if (mScoAudioMode == SCO_MODE_RAW) {
                                     status = mBluetoothHeadset.disconnectAudio();
                                 } else {
                                     status = mBluetoothHeadset.stopScoUsingVirtualVoiceCall(
                                                                         mBluetoothHeadsetDevice);
                                 }
+                                */
                                 break;
                             case SCO_STATE_DEACTIVATE_EXT_REQ:
                                 status = mBluetoothHeadset.stopVoiceRecognition(

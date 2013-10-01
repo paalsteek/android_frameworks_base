@@ -74,11 +74,13 @@ public class BluetoothTetheringDataTracker implements NetworkStateTracker {
     private NetworkInfo mNetworkInfo;
 
     private BluetoothPan mBluetoothPan;
-    private static String mRevTetheredIface;
+    private BluetoothDevice mDevice;
+    private static String mIface;
+
     /* For sending events to connectivity service handler */
     private Handler mCsHandler;
     protected Context mContext;
-    private static BluetoothTetheringDataTracker sInstance;
+    public static BluetoothTetheringDataTracker sInstance;
     private BtdtHandler mBtdtHandler;
     private AtomicReference<AsyncChannel> mAsyncChannel = new AtomicReference<AsyncChannel>(null);
 

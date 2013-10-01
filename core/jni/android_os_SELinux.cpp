@@ -272,19 +272,23 @@ static jstring getPidCon(JNIEnv *env, jobject, jint pid) {
  *          returns NULL string on error
  * Exceptions: None
  */
-static jobjectArray getBooleanNames(JNIEnv *env, JNIEnv) {
+  static jobjectArray getBooleanNames(JNIEnv *env, JNIEnv clazz) {
+    jclass stringClass = env->FindClass("java/lang/String");
+    jobjectArray stringArray = env->NewObjectArray(0, stringClass, NULL);
+
+#ifdef HAVE_SELINUX
     if (isSELinuxDisabled) {
-        return NULL;
+        return stringArray;
     }
 
     char **list;
     int len;
     if (security_get_boolean_names(&list, &len) == -1) {
-        return NULL;
+        return stringArray;
     }
 
-    jclass stringClass = env->FindClass("java/lang/String");
-    jobjectArray stringArray = env->NewObjectArray(len, stringClass, NULL);
+    env->DeleteLocalRef(stringArray);
+    stringArray = env->NewObjectArray(len, stringClass, NULL);
     for (int i = 0; i < len; i++) {
         ScopedLocalRef<jstring> obj(env, env->NewStringUTF(list[i]));
         env->SetObjectArrayElement(stringArray, i, obj.get());
@@ -293,7 +297,10 @@ static jobjectArray getBooleanNames(JNIEnv *env, JNIEnv) {
     free(list);
 
     return stringArray;
-}
+#else
+    return stringArray;
+#endif
+  }
 
 /*
  * Function: getBooleanValue

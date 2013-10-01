@@ -1449,10 +1449,15 @@ public final class PowerManagerService extends IPowerManager.Stub
                             keyboardBrightness = mKeyboardBrightness;
                         }
 
+                        // Engle, 让键盘跟按钮一起灭掉
                         mKeyboardLight.setBrightness(mKeyboardVisible ? keyboardBrightness : 0);
                         if (mButtonTimeout != 0 && now > mLastUserActivityTime + mButtonTimeout) {
+                            // Engle, 让键盘跟按钮一起灭掉
+                            mKeyboardLight.setBrightness(0);
                             mButtonsLight.setBrightness(0);
                         } else {
+                            // Engle, 让键盘跟按钮一起灭掉
+                            mKeyboardLight.setBrightness(mKeyboardVisible ? keyboardBrightness : 0);
                             mButtonsLight.setBrightness(buttonBrightness);
                             if (buttonBrightness != 0 && mButtonTimeout != 0) {
                                 nextTimeout = now + mButtonTimeout;

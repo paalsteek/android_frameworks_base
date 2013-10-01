@@ -92,11 +92,13 @@ public final class BluetoothSap implements BluetoothProfile {
         mContext = context;
         mServiceListener = l;
         mAdapter = BluetoothAdapter.getDefaultAdapter();
+        /* Engle, TODO
         try {
             mAdapter.getBluetoothManager().registerStateChangeCallback(mStateChangeCallback);
         } catch (RemoteException re) {
             Log.w(TAG,"Unable to register BluetoothStateChangeCallback",re);
         }
+        */
         Log.d(TAG, "BluetoothSap() call bindService");
         if (!context.bindService(new Intent(IBluetoothSap.class.getName()),
                                  mConnection, 0)) {
@@ -108,6 +110,8 @@ public final class BluetoothSap implements BluetoothProfile {
     /*package*/ void close() {
         if (VDBG) log("close()");
         mServiceListener = null;
+        // Engle, TODO
+        /*
         IBluetoothManager mgr = mAdapter.getBluetoothManager();
         if (mgr != null) {
             try {
@@ -115,6 +119,7 @@ public final class BluetoothSap implements BluetoothProfile {
             } catch (RemoteException re) {
                 Log.w(TAG,"Unable to unregister BluetoothStateChangeCallback",re);
             }
+            
         }
 
         synchronized (mConnection) {
@@ -127,6 +132,7 @@ public final class BluetoothSap implements BluetoothProfile {
                 }
             }
         }
+        */
     }
 
     protected void finalize() {
@@ -138,6 +144,8 @@ public final class BluetoothSap implements BluetoothProfile {
         @Override
         public void onBluetoothStateChange(boolean on) throws RemoteException {
             //Handle enable request to bind again.
+            // Engle, TODO
+            /*
             if (on) {
                 Log.d(TAG, "onBluetoothStateChange(on) call bindService");
                 if (!mContext.bindService(new Intent(IBluetoothSap.class.getName()),
@@ -158,6 +166,7 @@ public final class BluetoothSap implements BluetoothProfile {
                     }
                 }
             }
+            */
         }
     };
 
@@ -178,6 +187,8 @@ public final class BluetoothSap implements BluetoothProfile {
      */
     public boolean disconnect(BluetoothDevice device) {
         if (DBG) log("disconnect(" + device + ")");
+        // Engle, TODO
+        /*
         if (mSapService != null && isEnabled() &&
             isValidDevice(device)) {
             try {
@@ -188,13 +199,15 @@ public final class BluetoothSap implements BluetoothProfile {
             }
         }
         if (mSapService == null) Log.w(TAG, "Proxy not attached to service");
+        */
         return false;
     }
     /**
      * {@inheritDoc}
      */
     public List<BluetoothDevice> getConnectedDevices() {
-        if (VDBG) log("getConnectedDevices()");
+        // Engle, TODO
+        /*        if (VDBG) log("getConnectedDevices()");
         if (mSapService != null && isEnabled()) {
             try {
                 return mSapService.getConnectedDevices();
@@ -204,6 +217,7 @@ public final class BluetoothSap implements BluetoothProfile {
             }
         }
         if (mSapService == null) Log.w(TAG, "Proxy not attached to service");
+        */
         return new ArrayList<BluetoothDevice>();
     }
 

@@ -1848,17 +1848,49 @@ uint32_t SwitchInputMapper::getSources() {
     return AINPUT_SOURCE_SWITCH;
 }
 
+// Engle, for old device, merge for 4.1.2, there is no EV_SYN when open or close the keyboard slide
 void SwitchInputMapper::process(const RawEvent* rawEvent) {
+    //ALOGD("SwitchInputMapper::process: type=%d, code=%d, value=%d",
+    //        rawEvent->type, rawEvent->code, rawEvent->value);
+    uint32_t updatedSwitchValues = 0;
+    uint32_t updatedSwitchMask = 0;
+    int32_t switchCode = rawEvent->code;
+    int32_t switchValue = rawEvent->value;
     switch (rawEvent->type) {
     case EV_SW:
-        processSwitch(rawEvent->code, rawEvent->value);
+        if (switchCode >= 0 && switchCode < 32) {
+            if (switchValue) {
+                updatedSwitchValues |= 1 << switchCode;
+            }
+            updatedSwitchMask |= 1 << switchCode;
+        }
+        //ALOGD("SwitchInputMapper::process: mask=%d, values=%d", updatedSwitchMask, updatedSwitchValues);
+        if (updatedSwitchMask & 0x01) {
+            processSwitch(rawEvent->when, rawEvent->code, rawEvent->value);
+        } else {
+            processSwitch(rawEvent->code, rawEvent->value);
+        }
         break;
-
     case EV_SYN:
         if (rawEvent->code == SYN_REPORT) {
             sync(rawEvent->when);
         }
     }
+
+}
+
+// Engle, for old device, merge for 4.1.2, there is no EV_SYN when open or close the keyboard slide
+void SwitchInputMapper::processSwitch(nsecs_t when, int32_t switchCode, int32_t switchValue) {
+    uint32_t updatedSwitchValues = 0;
+    uint32_t updatedSwitchMask = 0;
+    if (switchCode >= 0 && switchCode < 32) {
+        if (switchValue) {
+            updatedSwitchValues |= 1 << switchCode;
+        }
+        updatedSwitchMask |= 1 << switchCode;
+    }
+    NotifySwitchArgs args(when, 0, updatedSwitchValues, updatedSwitchMask);
+    getListener()->notifySwitch(&args);
 }
 
 void SwitchInputMapper::processSwitch(int32_t switchCode, int32_t switchValue) {

@@ -95,6 +95,8 @@ import android.util.Log;
 import android.util.TypedValue;
 import android.view.AccessibilityIterators.TextSegmentIterator;
 import android.view.ActionMode;
+// Engle, 添加右键菜单
+import android.view.ContextMenu;
 import android.view.DragEvent;
 import android.view.Gravity;
 import android.view.HapticFeedbackConstants;
@@ -8195,6 +8197,58 @@ public class TextView extends View implements ViewTreeObserver.OnPreDrawListener
     static final int ID_COPY = android.R.id.copy;
     static final int ID_PASTE = android.R.id.paste;
 
+    // Engle, 添加右键菜单
+    private static final int ID_SWITCH_INPUT_METHOD = android.R.id.switchInputMethod;
+    
+    // Engle, 添加右键菜单
+    @Override
+    protected void onCreateContextMenu(ContextMenu menu) {
+        super.onCreateContextMenu(menu);
+        MenuHandler handler = new MenuHandler();
+
+        menu.add(0, TextView.ID_SELECT_ALL, 0, com.android.internal.R.string.selectAll)
+                .setOnMenuItemClickListener(handler).
+                setAlphabeticShortcut('a').
+                setShowAsAction(
+                        MenuItem.SHOW_AS_ACTION_ALWAYS | MenuItem.SHOW_AS_ACTION_WITH_TEXT);
+
+        if (canCut()) {
+            menu.add(0, TextView.ID_CUT, 0, com.android.internal.R.string.cut)
+                    .setOnMenuItemClickListener(handler).
+                    setAlphabeticShortcut('x').
+                    setShowAsAction(
+                            MenuItem.SHOW_AS_ACTION_ALWAYS | MenuItem.SHOW_AS_ACTION_WITH_TEXT);
+        }
+
+        if (canCopy()) {
+            menu.add(0, TextView.ID_COPY, 0, com.android.internal.R.string.copy)
+                    .setOnMenuItemClickListener(handler).
+                    setAlphabeticShortcut('c').
+                    setShowAsAction(
+                            MenuItem.SHOW_AS_ACTION_ALWAYS | MenuItem.SHOW_AS_ACTION_WITH_TEXT);
+        }
+
+        if (canPaste()) {
+            menu.add(0, TextView.ID_PASTE, 0, com.android.internal.R.string.paste)
+                    .setOnMenuItemClickListener(handler).
+                    setAlphabeticShortcut('v').
+                    setShowAsAction(
+                            MenuItem.SHOW_AS_ACTION_ALWAYS | MenuItem.SHOW_AS_ACTION_WITH_TEXT);
+        }
+
+        if (isInputMethodTarget()) {
+            menu.add(1, ID_SWITCH_INPUT_METHOD, 0, com.android.internal.R.string.inputMethod)
+                    .setOnMenuItemClickListener(handler).
+                    setShowAsAction(
+                            MenuItem.SHOW_AS_ACTION_ALWAYS | MenuItem.SHOW_AS_ACTION_WITH_TEXT);
+        }
+    }
+    
+    private class MenuHandler implements MenuItem.OnMenuItemClickListener {
+        public boolean onMenuItemClick (MenuItem item) {
+            return onTextContextMenuItem (item.getItemId());
+        }
+    }
     /**
      * Called when a context menu option for the text view is selected.  Currently
      * this will be one of {@link android.R.id#selectAll}, {@link android.R.id#cut},
@@ -8234,6 +8288,14 @@ public class TextView extends View implements ViewTreeObserver.OnPreDrawListener
             case ID_COPY:
                 setPrimaryClip(ClipData.newPlainText(null, getTransformedText(min, max)));
                 stopSelectionActionMode();
+                return true;
+
+            // Engle, 添加右键菜单切换输入法
+            case ID_SWITCH_INPUT_METHOD:
+                InputMethodManager imm = InputMethodManager.peekInstance();
+                if (imm != null) {
+                    imm.showInputMethodPicker();
+                }
                 return true;
         }
         return false;

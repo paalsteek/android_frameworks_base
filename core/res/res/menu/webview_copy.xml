@@ -15,6 +15,11 @@
 -->
 
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Engle, 添加右键菜单切换输入法  -->
+    <item android:id="@+id/switchInputMethod"
+        android:title="@string/inputMethod"
+        android:showAsAction="ifRoom|withText"
+        />
     <item android:id="@+id/select_all"
         android:title="@string/selectAll"
         android:showAsAction="ifRoom|withText"

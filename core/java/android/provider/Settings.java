@@ -3274,6 +3274,31 @@ public final class Settings {
         public static final String VOLUME_KEYS_CONTROL_RING_STREAM = "volume_keys_control_ring_stream";
 
         /**
+         * Engle, 添加IP拨号支持
+         * @hide
+         */
+        public static final String PHONE_IP_NUMBER = "phone_ip_number";
+
+        /**
+         * Engle, 添加IP拨号支持
+         * @hide
+         */
+        public static final String PHONE_CALL_WITH_IP_NUMBER = "phone_call_with_ip_number";
+
+        /**
+         * Engle, 添加键盘快捷启动应用
+         * @hide
+         */
+        public static final String USE_KEYBOARD_LUNCHER = "use_keyboard_luncher";
+
+        /**
+         * Engle, 添加相机键唤醒
+         * Whether to wake the screen with the volume keys, the value is boolean.
+         * @hide
+         */
+        public static final String FOCUS_WAKE_SCREEN = "focus_wake_screen";
+
+        /**
          * Settings to backup. This is here so that it's in the same place as the settings
          * keys and easy to update.
          *
@@ -3368,6 +3393,10 @@ public final class Settings {
             PHONE_BLACKLIST_PRIVATE_NUMBER_MODE,
             PHONE_BLACKLIST_UNKNOWN_NUMBER_MODE,
             PHONE_BLACKLIST_REGEX_ENABLED,
+
+            PHONE_IP_NUMBER, //Engle, 添加备份
+            PHONE_CALL_WITH_IP_NUMBER,
+            FOCUS_WAKE_SCREEN
         };
 
         // Settings moved to Settings.Secure
@@ -4163,6 +4192,31 @@ public final class Settings {
          */
         @Deprecated
         public static final String BLUETOOTH_ON = Global.BLUETOOTH_ON;
+
+        // Engle, add for bluez
+        /**
+         * Get the key that retrieves a bluetooth headset's priority.
+         * @hide
+         */
+        public static final String getBluetoothHeadsetPriorityKey(String address) {
+            return ("bluetooth_headset_priority_" + address.toUpperCase());
+        }
+
+        /**
+         * Get the key that retrieves a bluetooth a2dp sink's priority.
+         * @hide
+         */
+        public static final String getBluetoothA2dpSinkPriorityKey(String address) {
+            return ("bluetooth_a2dp_sink_priority_" + address.toUpperCase());
+        }
+
+        /**
+         * Get the key that retrieves a bluetooth Input Device's priority.
+         * @hide
+         */
+        public static final String getBluetoothInputDevicePriorityKey(String address) {
+            return ("bluetooth_input_device_priority_" + address.toUpperCase());
+        }
 
         /**
          * @deprecated Use {@link android.provider.Settings.Global#DATA_ROAMING} instead

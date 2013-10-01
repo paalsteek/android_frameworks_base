@@ -25,6 +25,8 @@ import android.provider.Browser;
 import android.view.ActionMode;
 import android.view.Menu;
 import android.view.MenuItem;
+//Engle, 添加右键菜单
+import android.view.inputmethod.InputMethodManager;
 
 class SelectActionModeCallback implements ActionMode.Callback {
     private WebViewClassic mWebView;
@@ -64,6 +66,8 @@ class SelectActionModeCallback implements ActionMode.Callback {
         // in a better way.
         ClipboardManager cm = (ClipboardManager)(context
                 .getSystemService(Context.CLIPBOARD_SERVICE));
+        InputMethodManager imm = InputMethodManager.peekInstance();
+        
         boolean isFocusable = mode.isUiFocusable();
         boolean isEditable = mWebView.focusCandidateIsEditableText();
         boolean canPaste = isEditable && cm.hasPrimaryClip() && isFocusable;
@@ -71,6 +75,8 @@ class SelectActionModeCallback implements ActionMode.Callback {
         boolean canCut = isEditable && mIsTextSelected && isFocusable;
         boolean canCopy = mIsTextSelected;
         boolean canWebSearch = mIsTextSelected;
+        boolean canSwitchIME = (null != imm && imm.isActive()) ? true : false;
+        setMenuVisibility(menu, canSwitchIME, android.R.id.switchInputMethod);
         setMenuVisibility(menu, canFind, com.android.internal.R.id.find);
         setMenuVisibility(menu, canPaste, com.android.internal.R.id.paste);
         setMenuVisibility(menu, canCut, com.android.internal.R.id.cut);
@@ -88,6 +94,14 @@ class SelectActionModeCallback implements ActionMode.Callback {
     @Override
     public boolean onActionItemClicked(ActionMode mode, MenuItem item) {
         switch(item.getItemId()) {
+            // Engle, 添加右键菜单
+            case android.R.id.switchInputMethod:
+                InputMethodManager imm = InputMethodManager.peekInstance();
+                if (imm != null) {
+                    imm.showInputMethodPicker();
+                }
+                break;
+                
             case android.R.id.cut:
                 mWebView.cutSelection();
                 mode.finish();
