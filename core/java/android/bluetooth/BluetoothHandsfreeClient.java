@@ -370,57 +370,24 @@ public final class BluetoothHandsfreeClient implements BluetoothProfile {
     private IBluetoothHandsfreeClient mService;
     private BluetoothAdapter mAdapter;
 
-    final private IBluetoothStateChangeCallback mBluetoothStateChangeCallback =
-            new IBluetoothStateChangeCallback.Stub() {
-                @Override
-                public void onBluetoothStateChange(boolean up) {
-                    if (DBG) Log.d(TAG, "onBluetoothStateChange: up=" + up);
-                    if (!up) {
-                        if (VDBG) Log.d(TAG,"Unbinding service...");
-                        synchronized (mConnection) {
-                            try {
-                                mService = null;
-                                mContext.unbindService(mConnection);
-                            } catch (Exception re) {
-                                Log.e(TAG,"",re);
-                            }
-                        }
-                    } else {
-                        synchronized (mConnection) {
-                            try {
-                                if (mService == null) {
-                                    if (VDBG) Log.d(TAG,"Binding service...");
-                                    if (!mContext.bindService(new Intent(IBluetoothHandsfreeClient.class.getName()), mConnection, 0)) {
-                                        Log.e(TAG, "Could not bind to Bluetooth Handsfree Client Service");
-                                    }
-                                }
-                            } catch (Exception re) {
-                                Log.e(TAG,"",re);
-                            }
-                        }
-                    }
-                }
-        };
-
     /**
      * Create a BluetoothHandsfreeClient proxy object.
      */
-    /*package*/ BluetoothHandsfreeClient(Context context, ServiceListener l) {
-        mContext = context;
+    /*package*/ BluetoothHandsfreeClient(Context mContext, ServiceListener l) {
+        IBinder b = ServiceManager.getService(BluetoothA2dpService.BLUETOOTH_A2DP_SERVICE);
         mServiceListener = l;
-        mAdapter = BluetoothAdapter.getDefaultAdapter();
 
-        IBluetoothManager mgr = mAdapter.getBluetoothManager();
-        if (mgr != null) {
-            try {
-                mgr.registerStateChangeCallback(mBluetoothStateChangeCallback);
-            } catch (RemoteException e) {
-                Log.e(TAG,"",e);
+        if (b != null) {
+            mService = IBluetoothA2dp.Stub.asInterface(b);
+            if (mServiceListener != null) {
+                mServiceListener.onServiceConnected(BluetoothProfile.A2DP, this);
             }
-        }
+        } else {
+            Log.w(TAG, "Bluetooth A2DP service not available!");
 
-        if (!context.bindService(new Intent(IBluetoothHandsfreeClient.class.getName()), mConnection, 0)) {
-            Log.e(TAG, "Could not bind to Bluetooth Handsfree Client Service");
+            // Instead of throwing an exception which prevents people from going
+            // into Wireless settings in the emulator. Let it crash later when it is actually used.
+            mService = null;
         }
     }
 
@@ -433,25 +400,6 @@ public final class BluetoothHandsfreeClient implements BluetoothProfile {
     /*package*/ void close() {
         if (VDBG) log("close()");
 
-        IBluetoothManager mgr = mAdapter.getBluetoothManager();
-        if (mgr != null) {
-            try {
-                mgr.unregisterStateChangeCallback(mBluetoothStateChangeCallback);
-            } catch (Exception e) {
-                Log.e(TAG,"",e);
-            }
-        }
-
-        synchronized (mConnection) {
-            if (mService != null) {
-                try {
-                    mService = null;
-                    mContext.unbindService(mConnection);
-                } catch (Exception re) {
-                    Log.e(TAG,"",re);
-                }
-            }
-        }
         mServiceListener = null;
     }
 
