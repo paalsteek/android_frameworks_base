@@ -25,6 +25,7 @@ import android.content.ServiceConnection;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.os.RemoteException;
+import android.os.ServiceManager;
 import android.util.Log;
 
 import java.util.ArrayList;
@@ -374,11 +375,11 @@ public final class BluetoothHandsfreeClient implements BluetoothProfile {
      * Create a BluetoothHandsfreeClient proxy object.
      */
     /*package*/ BluetoothHandsfreeClient(Context mContext, ServiceListener l) {
-        IBinder b = ServiceManager.getService(BluetoothA2dpService.BLUETOOTH_A2DP_SERVICE);
+        IBinder b = ServiceManager.getService("bluetooth");
         mServiceListener = l;
 
         if (b != null) {
-            mService = IBluetoothA2dp.Stub.asInterface(b);
+            mService = IBluetoothHandsfreeClient.Stub.asInterface(b);
             if (mServiceListener != null) {
                 mServiceListener.onServiceConnected(BluetoothProfile.A2DP, this);
             }

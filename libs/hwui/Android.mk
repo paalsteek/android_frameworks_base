@@ -1,6 +1,11 @@
 LOCAL_PATH:= $(call my-dir)
 include $(CLEAR_VARS)
 
+#Engle, add for perforamnce
+ifeq ($(strip $(TARGET_CPU_VARIANT)),cortex-a8)
+	LOCAL_CFLAGS += -O3 -march=armv7-a -mfpu=neon -mfloat-abi=softfp -funroll-loops
+endif
+
 # Only build libhwui when USE_OPENGL_RENDERER is
 # defined in the current device/board configuration
 ifeq ($(USE_OPENGL_RENDERER),true)

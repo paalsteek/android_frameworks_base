@@ -121,6 +121,7 @@ public final class BluetoothSap implements BluetoothProfile {
             }
             
         }
+        */
 
         synchronized (mConnection) {
             if ( mSapService != null) {
@@ -132,7 +133,7 @@ public final class BluetoothSap implements BluetoothProfile {
                 }
             }
         }
-        */
+
     }
 
     protected void finalize() {
